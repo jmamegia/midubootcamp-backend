@@ -1,57 +1,76 @@
 /* eslint-disable eqeqeq */
-const express = require('express')
-const cors = require('cors')
+const express = require("express");
+const cors = require("cors");
+require("./db/db.js");
+const Note = require("./db/Notes");
+const { response } = require("express");
+const handleError = require("./middlewares/handleError.js");
+const handle404 = require("./middlewares/handle404.js");
+const app = express();
+app.use(express.json());
+app.use(cors());
 
-let notes = require('./notes.json')
-const app = express()
-app.use(express.json())
-app.use(cors())
-
-app.get('/', (req, res) => {
-  res.send('<h1>Hi</h1>')
-})
+app.get("/", (req, res) => {
+  res.send("<h1>Hi</h1>");
+});
 
 // api
-app.get('/api/notes', (req, res) => {
-  res.json(notes)
-})
+app.get("/api/notes", (req, res) => {
+  Note.find().then((notes) => {
+    res.json(notes);
+  });
+});
 
-app.get('/api/notes/:id', (req, res) => {
-  const id = req.params.id
-  const note = notes.find((note) => note.id == id)
-  note ? res.json(note) : res.status(404).end()
-})
+app.get("/api/notes/:id", (req, res, next) => {
+  const id = req.params.id;
+  Note.findById(id)
+    .then((note) => {
+      note ? res.json(note) : res.status(404).end();
+    })
+    .catch((err) => {
+      next(err);
+    });
+});
 
-app.delete('/api/notes/:id', (req, res) => {
-  const id = req.params.id
-  const note = notes.find((note) => note.id == id)
-  if (note) {
-    notes = notes.filter((note) => note.id != id)
-    res.status(204).end()
-  } else res.status(404).end()
-})
+app.delete("/api/notes/:id", (req, res, next) => {
+  Note.findByIdAndRemove(req.params.id)
+    .then((deleted) => {
+      res.status(204).json(deleted);
+    })
+    .catch((err) => {
+      console.log(err);
+    });
+});
 
-app.post('/api/notes', (req, res) => {
-  let note = req.body
-  if (!note || !note.content) { res.status(400).json({ error: 'Void fields' }) } else {
-    note = {
-      id: parseInt(notes.length + 100),
-      ...note,
-      important: note.important || false,
-      date: new Date().toISOString()
-    }
-    try {
-      notes = [...notes, note]
-      res.status(201).json(note)
-    } catch {
-      res.status(400).json({ error: 'server error' })
-    }
-  }
-})
+app.put("/api/notes/:id", () => {
+  Note.findByIdAndUpdate(
+    req.params.id,
+    { content: req.body.content, important: req.body.important },
+    { new: true }
+  )
+    .then((updated) => {
+      updated ? res.status(200).json(updated) : res.status(404).end();
+    })
+    .catch((err) => {
+      console.log(err);
+    });
+});
 
-app.use((req, res) => {
-  res.status(404).json({ error: 'Page not found' })
-})
+app.post("/api/notes", (req, res) => {
+  const note = new Note({
+    content: req.body.content,
+    date: new Date(),
+    important: req.body.important || false,
+  });
+  note
+    .save()
+    .then((note) => res.status(201).json(note))
+    .catch((err) => res.status(401).json({ error: "Db error" }));
+});
 
-const PORT = process.env.PORT || 3001
-app.listen(PORT, () => console.log(`Server on port : ${PORT}`))
+app.use(handleError);
+
+app.use(handle404);
+
+const PORT = process.env.PORT || 3001;
+app.listen(PORT, () => console.log(`Server on port : ${PORT}`));
