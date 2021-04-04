@@ -6,6 +6,7 @@ const handleError = require("./middlewares/handleError.js");
 const handle404 = require("./middlewares/handle404.js");
 const usersRouter = require("./Controllers/users");
 const notesRouter = require("./Controllers/notes");
+const userLogin = require("./Controllers/login");
 const app = express();
 app.use(express.json());
 app.use(cors());
@@ -16,7 +17,8 @@ app.get("/", (req, res) => {
 
 app.use("/api/notes", notesRouter);
 app.use("/api/user", usersRouter);
-app.use(handleError);
+app.use("/api/login", userLogin);
+//app.use(handleError);
 app.use(handle404);
 
 const PORT = process.env.PORT || 3001;

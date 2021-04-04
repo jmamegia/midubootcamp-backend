@@ -5,7 +5,6 @@ const dbString =
     ? process.env.DB_STRING_TEST
     : process.env.DB_STRING_CON;
 
-console.log(dbString);
 const mongoose = require("mongoose");
 const dbConfig = {
   useNewUrlParser: true,
